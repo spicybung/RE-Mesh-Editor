@@ -31,7 +31,7 @@ except Exception as err:
 	usedTextureSet = set()
 
 #Detail maps that use regular normal maps
-legacyDetailMapGames = set(["RE2","RE2RT","RE3","RE3RT","RE7RT","DMC5"])
+legacyDetailMapGames = set(["RE2","RE2RT","RE3","RE3RT","RE7RT","DMC5","PRAG"])
 
 alphaBlendShaderTypes = set([1,2,3,4,5,8,10,12,13])#Decal,DecalWithMetallic,DecalNRMR,Transparent,Distortion,Water,GUI,GUIMeshTransparent,ExpensiveTransparent
 	
@@ -76,12 +76,14 @@ albedoTypeSet = set([
 	#"BaseDielectricMap_G",
 	#"BaseDielectricMap_R",
 	"BaseMap",
-	"CloudMap",
+	#"CloudMap",
 	"CloudMap_1",
 	"FaceBaseMap",
 	"Face_BaseDielectricMap",
 	"Moon_Tex",
 	"Sky_Top_Tex",
+	"RTReflectionBaseMap"
+	#"IrisBaseMap"
 
 	])
 normalTypeSet = set([
@@ -108,6 +110,7 @@ normalTypeSet = set([
 	"NormalRoughnessHeightMap",
 	"NRRTMap",
 	"Tex_Normal",
+	"IrisNormalMap"
 	])
 
 alphaTypeSet = set([
@@ -156,11 +159,13 @@ NRRTTypes = set([
 	"NormalRoughnessTranslucentMap",
 	"NormalRoughnessAlphaMap",
 	"NormalRoughnessHeightMap",
+	"NormalOcclusionCavityMap",
 	"NRRTMap",
 	])
 ATOSTypes = set([
 	"AlphaTranslucentOcclusionCavityMap",
 	"AlphaTranslucentOcclusionSSSMap",
+	"ATOCorASOC",
 	])
 NAMTypes = set([
 	"Stitch_NAM",
@@ -168,6 +173,7 @@ NAMTypes = set([
 OCTDTypes = set([
 	"OcclusionCavityTranslucentDetailMap",
 	"OcclusionCavitySSSDetailMap",
+	"OcclusionCavityMaskAnisoMap",
 	])
 
 MiscMapTypes = set([
@@ -266,6 +272,7 @@ def findMDFPathFromMeshPath(meshPath,gameName = None):
 		".240820143":".45",#MHWILDS
 		".241111606":".45",#MHWILDS
 		".240827123":".46",#ONI2
+		".250925211":".51",#PRAG
 		
 		
 		}
@@ -358,6 +365,7 @@ texVersionDict = {
 	".32":".143221013",
 	".40":".760230703",
 	".45":".241106027",
+	".51":".250813143",
   }	
 def getTexPath(baseTexturePath,chunkPathList,mdfVersion):
 	
@@ -558,6 +566,7 @@ def importMDF(mdfFile,meshMaterialDict,loadUnusedTextures,loadUnusedProps,useBac
 				"detailNormalSocket":None,
 				"detailRoughnessSocket":None,
 				"detailMetallicSocket":None,
+				"anisoSocket":None,#Not implemented yet
 				"isDielectric":False,
 				"isNRRT":False,
 				"disableAO":False,
@@ -957,7 +966,7 @@ def importMDF(mdfFile,meshMaterialDict,loadUnusedTextures,loadUnusedProps,useBac
 				#TODO - will come back to this
 				
 				#RE4 detail map
-				if "DetailMap" in matInfo["textureNodeDict"]:
+				if "DetailMap" in matInfo["textureNodeDict"] and matInfo["gameName"] != "PRAG":#Disable detail maps for pragmata since they don't look right yet
 					detailMapNode = matInfo["textureNodeDict"]["DetailMap"]
 					currentPos = [detailMapNode.location[0]+300,detailMapNode.location[1]]
 					#R Normal X

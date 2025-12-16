@@ -18,4 +18,5 @@ gameNameToTexVersionDict = {
 	"DR":240606151,
 	"MHWILDS":241106027,
 	"ONI2":240701001,
+	"PRAG":250813143,
 	}

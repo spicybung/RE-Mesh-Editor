@@ -2,7 +2,7 @@
 bl_info = {
 	"name": "RE Mesh Editor",
 	"author": "NSA Cloud",
-	"version": (0, 59),
+	"version": (0, 60),
 	"blender": (3, 3, 0),
 	"location": "File > Import-Export",
 	"description": "Import and export RE Engine Mesh files natively into Blender. No Noesis required.",
@@ -81,6 +81,7 @@ from .modules.mdf.re_mdf_operators import (
 	WM_OT_SavePreset,
 	WM_OT_OpenPresetFolder,
 	WM_OT_ApplyMDFToMeshCollection,
+	WM_OT_FindReplaceTextureBindings,
 
 )
 #tex
@@ -236,6 +237,7 @@ class ChunkPathPropertyGroup(bpy.types.PropertyGroup):
 		("DR", "Dead Rising", ""),
 		("ONI2", "Onimusha 2", ""),
 		("MHWILDS", "Monster Hunter Wilds", ""),
+		("PRAG", "Pragmata", ""),
 		]
     )
     path: StringProperty(
@@ -872,6 +874,7 @@ class ExportREMesh(Operator, ExportHelper):
 				(".240424828", "Dead Rising", "Dead Rising"),
 				(".240827123", "Onimusha 2", "Onimusha 2"),
 				(".241111606", "Monster Hunter Wilds", "Monster Hunter Wilds"),
+				(".250925211", "Pragmata", "Pragmata"),
 			   ]
 		)
 	targetCollection: bpy.props.StringProperty(
@@ -970,6 +973,10 @@ class ExportREMesh(Operator, ExportHelper):
 		layout = self.layout
 		layout.label(text = "Mesh Version:")
 		layout.prop(self, "filename_ext")
+		if self.filename_ext == ".250925211":
+			row = layout.row()
+			row.alert=True
+			row.label(icon = "ERROR",text="Mesh export isn't working yet!")
 		layout.label(text = "Mesh Collection:")
 		layout.prop_search(self, "targetCollection",bpy.data,"collections",icon = "COLLECTION_COLOR_01")
 		
@@ -1028,14 +1035,15 @@ class ExportREMesh(Operator, ExportHelper):
 		success = exportREMeshFile(self.filepath,options)
 		if success:
 			self.report({"INFO"},"Exported RE Mesh successfully.")
-			bpy.data.collections[self.targetCollection]["BatchExport_path"] = self.filepath
-			bpy.data.collections[self.targetCollection]["BatchExport_exportAllLODs"] = self.exportAllLODs
-			bpy.data.collections[self.targetCollection]["BatchExport_preserveSharpEdges"] = self.preserveSharpEdges
-			bpy.data.collections[self.targetCollection]["BatchExport_rotate90"] = self.rotate90
-			bpy.data.collections[self.targetCollection]["BatchExport_exportBlendShapes"] = self.exportBlendShapes
-			bpy.data.collections[self.targetCollection]["BatchExport_useBlenderMaterialName"] = self.useBlenderMaterialName
-			bpy.data.collections[self.targetCollection]["BatchExport_preserveBoneMatrices"] = self.preserveBoneMatrices
-			bpy.data.collections[self.targetCollection]["BatchExport_exportBoundingBoxes"] = self.exportBoundingBoxes
+			if self.targetCollection in bpy.data.collections:
+				bpy.data.collections[self.targetCollection]["BatchExport_path"] = self.filepath
+				bpy.data.collections[self.targetCollection]["BatchExport_exportAllLODs"] = self.exportAllLODs
+				bpy.data.collections[self.targetCollection]["BatchExport_preserveSharpEdges"] = self.preserveSharpEdges
+				bpy.data.collections[self.targetCollection]["BatchExport_rotate90"] = self.rotate90
+				bpy.data.collections[self.targetCollection]["BatchExport_exportBlendShapes"] = self.exportBlendShapes
+				bpy.data.collections[self.targetCollection]["BatchExport_useBlenderMaterialName"] = self.useBlenderMaterialName
+				bpy.data.collections[self.targetCollection]["BatchExport_preserveBoneMatrices"] = self.preserveBoneMatrices
+				bpy.data.collections[self.targetCollection]["BatchExport_exportBoundingBoxes"] = self.exportBoundingBoxes
 		else:
 			self.report({"INFO"},"RE Mesh export failed. See Window > Toggle System Console for info on how to fix it.")
 		
@@ -1100,7 +1108,7 @@ class ImportREMDF(bpy.types.Operator, ImportHelper):
 			return self.execute(context)
 		context.window_manager.fileselect_add(self)
 		return {'RUNNING_MODAL'}
-supportedMDFVersions = set([23,19,21,32,31,40,45])	
+supportedMDFVersions = set([23,19,21,32,31,40,45,51])	
 
 def update_targetMDFCollection(self,context):
 	temp = bpy.data.screens.get("temp")
@@ -1135,6 +1143,7 @@ class ExportREMDF(bpy.types.Operator, ExportHelper):
 				(".40", "Dragon's Dogma 2 / Kunitsu-Gami / Dead Rising", "Dragon's Dogma 2, Kunitsu-Gami, Dead Rising"),
 				(".46", "Onimusha 2", "Onimusha 2"),
 				(".45", "Monster Hunter Wilds", "Monster Hunter Wilds"),
+				(".51", "Pragmata", "Pragmata"),
 			  ]
 		)
 	targetCollection : StringProperty(
@@ -1248,7 +1257,8 @@ class ExportREFBXSkel(bpy.types.Operator, ExportHelper):
 				(".4", "RERT (.4)", ""),
 				(".5", "RE4R (.5)", ""),
 				(".6", "DD2 (.6)", ""),
-				(".7", "MHWILDS (.7)", ""),
+				(".7", "MH Wilds (.7)", ""),
+				(".8", "Pragmata (.8)", ""),
 
 			   ],
 		default = ".7"
@@ -1266,13 +1276,19 @@ class ExportREFBXSkel(bpy.types.Operator, ExportHelper):
 			if context.active_object != None:
 				if context.active_object.type == "ARMATURE":
 					self.targetArmature = context.active_object.name
-					self.filepath = self.targetArmature.split(".fbxskel")[0]+".fbxskel" + self.filename_ext
+					
 			else:
 				for obj in bpy.context.scene.objects:
-					if obj.type == "ARMATURE" and ".fbxskel" in obj.name:
+					if obj.type == "ARMATURE" and (".fbxskel" in obj.name or ".skeleton" in obj.name or ".refskel" in obj.name):
 						self.targetArmature = obj.name
-						self.filepath = self.targetArmature.split(".fbxskel")[0]+".fbxskel" + self.filename_ext
 						break
+			if self.targetArmature != "":
+				if ".fbxskel" in self.targetArmature:
+					self.filepath = self.targetArmature.split(".fbxskel")[0]+".fbxskel" + self.filename_ext
+				elif ".skeleton" in self.targetArmature:
+					self.filepath = self.targetArmature.split(".skeleton")[0]+".skeleton" + self.filename_ext
+				elif ".refskel" in self.targetArmature:
+					self.filepath = self.targetArmature.split(".refskel")[0]+".refskel" + self.filename_ext
 		context.window_manager.fileselect_add(self)
 		return {'RUNNING_MODAL'}
 	
@@ -1377,6 +1393,7 @@ classes = [
 	WM_OT_OpenPresetFolder,
 	WM_OT_ApplyMDFToMeshCollection,
 	WM_OT_ShowREMeshErrorWindow,
+	WM_OT_FindReplaceTextureBindings,
 	#tex
 	#operators
 	WM_OT_ConvertFolderToTex,
@@ -1445,7 +1462,7 @@ if bpy.app.version >= (4, 1, 0):
 		def poll_drop(cls, context):
 			return (context.area and context.area.type == 'VIEW_3D')
 		
-	fbxSkelExtensionsString = ".4;.5;.6;.7;"#RE Verse tex drag and drop support
+	fbxSkelExtensionsString = ".4;.5;.6;.7;.8;"#RE Verse tex drag and drop support
 	
 	class FBXSKEL_FH_drag_import(bpy.types.FileHandler):
 		bl_idname = "FBXSKEL_FH_drag_import"

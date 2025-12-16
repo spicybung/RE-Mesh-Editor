@@ -6,6 +6,14 @@ from .file_re_mesh import Matrix4x4,AABB,Sphere,CompressedSixWeightIndices,Compr
 VERSION_SF6 = 230110883
 VERSION_MHWILDS_BETA = 240820143
 VERSION_MHWILDS = 241111606
+VERSION_PRAGDEMO = 250925211
+
+SIX_WEIGHT_MESH_VERSIONS = frozenset([
+	VERSION_SF6,
+	VERSION_MHWILDS_BETA,
+	VERSION_MHWILDS,
+	VERSION_PRAGDEMO,	
+	])
 
 typeNameMapping = ["Position","NorTan","UV","UV2","Weight","Color","SF6UnknownVertexDataType","ExtraWeight"]
 typeStrideDict = {
@@ -640,7 +648,7 @@ class ParsedREMesh:
 		#Parse Vertex Buffer
 		if reMesh.meshBufferHeader != None:
 			tags = set()
-			if reMesh.meshVersion == VERSION_SF6 or reMesh.meshVersion == VERSION_MHWILDS_BETA or reMesh.meshVersion == VERSION_MHWILDS:#Street Fighter 6 mesh version + MH Wilds
+			if reMesh.meshVersion in SIX_WEIGHT_MESH_VERSIONS:#Street Fighter 6 mesh version + MH Wilds
 				tags.add("SixWeightCompressed")#Add tag to parse compressed weights
 			#if duplicate in vertexelementlist, add shadowLOD tag
 			

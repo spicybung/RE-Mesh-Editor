@@ -27,7 +27,7 @@ from ..mdf.blender_re_mdf import importMDFFile
 from .re_mesh_export_errors import addErrorToDict,printErrorDict,showREMeshErrorWindow
 from ..gen_functions import splitNativesPath,raiseWarning
 from ..blender_utils import showErrorMessageBox
-from ..hashing.pymmh3 import hash
+from ..hashing.mmh3.pymmh3 import hashUTF8
 import time
 import numpy as np																																																																												
 timeFormat = "%d"
@@ -206,7 +206,7 @@ def importSkeleton(parsedSkeleton,armatureName,collection,rotate90,targetArmatur
 			hashedName = False
 			boneName = bone.boneName
 			if len(boneName) > 63:#Thank DMC5 for abominations like this: bake12_sim_sm1103_vegetablebox_04__PMesh_sm1103_vegetablebox_sm1103_vegetablebox_s6_polySurface6180__p001
-				boneName = f"#HASHED_{str(hash(boneName))}"
+				boneName = f"#HASHED_{str(hashUTF8(boneName))}"
 				raiseWarning(f"Bone name length exceeds Blender's limit of 63 characters, hashing bone name: {bone.boneName}")
 				hashedName = True
 				hashedNameDict[bone.boneName] = boneName
@@ -322,16 +322,15 @@ def importMesh(meshName = "newMesh",vertexList = [],faceList = [],vertexNormalLi
 	#Import Weights
 	if vertexGroupWeightList != [] and boneNameList != []:
 		#Only create vertex groups for bones that get used
-		
-		#print(boneNameList)
 		if len(boneNameList) > 1:
 			#print(boneNameList)
 			usedBoneIndices = sorted(list({x for vertex in vertexGroupBoneIndicesList for x in vertex} | {x for vertex in extraVertexGroupBoneIndicesList for x in vertex}))#Get all used bone indices in hierarchy order
 			#print(usedBoneIndices)
 			for boneIndex in usedBoneIndices:
+				#print(boneIndex)
 				boneName = boneNameList[boneIndex]
 				if len(boneName) > 63:
-					boneName = f"#HASHED_{str(hash(boneName))}"
+					boneName = f"#HASHED_{str(hashUTF8(boneName))}"
 					
 				meshObj.vertex_groups.new(name = boneName)
 				
@@ -342,7 +341,7 @@ def importMesh(meshName = "newMesh",vertexList = [],faceList = [],vertexNormalLi
 					if vertexGroupWeightList[vertexIndex][weightIndex] > 0:
 						boneName = boneNameList[boneIndex]
 						if len(boneName) > 63:
-							boneName = f"#HASHED_{str(hash(boneName))}"
+							boneName = f"#HASHED_{str(hashUTF8(boneName))}"
 						meshObj.vertex_groups[boneName].add([vertexIndex],vertexGroupWeightList[vertexIndex][weightIndex],'ADD')
 		
 			if extraVertexGroupWeightList != [] and IMPORT_EXTRA_WEIGHTS:		
@@ -354,7 +353,7 @@ def importMesh(meshName = "newMesh",vertexList = [],faceList = [],vertexNormalLi
 						if extraVertexGroupWeightList[vertexIndex][weightIndex] > 0:
 							boneName = boneNameList[boneIndex]
 							if len(boneName) > 63:
-								boneName = f"#HASHED_{str(hash(boneName))}"
+								boneName = f"#HASHED_{str(hashUTF8(boneName))}"
 							meshObj.vertex_groups[boneName].add([vertexIndex],extraVertexGroupWeightList[vertexIndex][weightIndex],'ADD')
 		else:#No bone remap table edge case
 			vg = meshObj.vertex_groups.new(name=boneNameList[0])
@@ -375,7 +374,7 @@ def importMesh(meshName = "newMesh",vertexList = [],faceList = [],vertexNormalLi
 			for boneIndex in usedBoneIndices:
 				boneName = "SHAPEKEY_" + boneNameList[boneIndex]
 				if len(boneName) > 63:
-					boneName = f"#HASHED_{str(hash(boneName))}"
+					boneName = f"#HASHED_{str(hashUTF8(boneName))}"
 					
 				meshObj.vertex_groups.new(name = boneName)
 				#vg.lock_weight = True
@@ -387,7 +386,7 @@ def importMesh(meshName = "newMesh",vertexList = [],faceList = [],vertexNormalLi
 					if vertexGroupWeightList[vertexIndex][weightIndex] > 0:
 						boneName = "SHAPEKEY_"+boneNameList[boneIndex]
 						if len(boneName) > 63:
-							boneName = f"#HASHED_{str(hash(boneName))}"
+							boneName = f"#HASHED_{str(hashUTF8(boneName))}"
 						meshObj.vertex_groups[boneName].add([vertexIndex],vertexGroupWeightListSecondary[vertexIndex][weightIndex],'ADD')
 		else:#No bone remap table edge case
 			vg = meshObj.vertex_groups.new(name="SHAPEKEY_"+boneNameList[0])
@@ -547,7 +546,7 @@ def importBoundingBox(bbox,bboxName,meshCollection,armatureObj = None,boneParent
 	
 	if armatureObj != None and boneParent != None:
 		if len(boneParent) > 63:
-			boneName = f"#HASHED_{str(hash(boneParent))}"
+			boneName = f"#HASHED_{str(hashUTF8(boneParent))}"
 		else:
 			boneName = boneParent
 		constraint = bboxObj.constraints.new(type = "CHILD_OF")
@@ -762,7 +761,7 @@ def importREMeshFile(filePath,options):
 		if not parsedMesh.isMPLY:
 			importBoundingBoxes(parsedMesh.boundingBox,parsedMesh.boundingSphere,boundingBoxCollection,armatureObj,parsedMesh.skeleton,options["rotate90"])
 		else:
-			importBoundingBox(parsedMesh.boundingBox,f"{meshFileName} Bounding Box",boundingBoxCollection,rotate90 = options["rotate90"])
+			importBoundingBox(parsedMesh.boundingBox,f"Mesh Bounding Box",boundingBoxCollection,rotate90 = options["rotate90"])
 	meshImportEndTime = time.time()
 	meshImportTime =  meshImportEndTime - meshImportStartTime
 	print(f"Mesh imported in {timeFormat%(meshImportTime * 1000)} ms.")
@@ -985,7 +984,7 @@ def exportREMeshFile(filePath,options):
 	maxWeightsPerVertex = 8
 	maxWeightsPerVertexExtended = 16
 	maxWeightedBones = 256
-	if gameName == "SF6" or gameName == "MHWILDS":
+	if gameName == "SF6" or gameName == "MHWILDS" or gameName == "PRAG":
 		maxWeightsPerVertex = 6
 		maxWeightsPerVertexExtended = 12
 		maxWeightedBones = 1024

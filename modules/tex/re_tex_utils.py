@@ -2,7 +2,7 @@
 # Credit to Asterisk Ampersand, code borrowed from Tex Chopper
 from ..dds.file_dds import DDS, DX10_Header, DDSFile, getDDSHeader
 
-from .file_re_tex import RE_TexFile, MipData, CompressedImageHeader
+from .file_re_tex import RE_TexFile, MipData, CompressedImageHeader,GDEFLATE_VERSIONS
 from ..gen_functions import raiseWarning
 from ..gdeflate.gdeflate import GDeflate, GDeflateCompressionLevel, GDeflateError
 from ..ddsconv.directx.texconv import Texconv, unload_texconv
@@ -124,8 +124,8 @@ def packageTextures(ddsHeader, ddsList, compress, formatData):
     """Pads and compresses textures aas needed, stores information relative to their size for header generation"""
     compressor = GDeflate()
     miptex = []
-    offset = 0
     for dds in ddsList:
+        offset = 0
         mips = []
         minima = formatData.scanlineMinima
         #print(f"image {tex}")
@@ -204,7 +204,7 @@ def storeTextures(ddsHeader, texFile, miptex, compress):
 
 def getTexFileFromDDS(ddsList, texVersion, streamingFlag=False):
     ddsHeader = ddsList[0].header
-    isGDeflate = texVersion == VERSION_MHWILDS# or texVersion == VERSION_MHWILDS_BETA
+    isGDeflate = texVersion in GDEFLATE_VERSIONS
     newTexFile = makeTexHeader(texVersion, ddsHeader, len(ddsList))
     formatData = format_ops.packetSizeData(newTexFile.tex.header.formatString)
     miptex = packageTextures(ddsHeader, ddsList, isGDeflate, formatData)

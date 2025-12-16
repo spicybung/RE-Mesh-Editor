@@ -19,7 +19,7 @@ def findHeaderObj():
 		else:
 			return None
 
-PRESET_VERSION = 4#To be changed when there are changes to material variables
+PRESET_VERSION = 5#To be changed when there are changes to material variables
 PRESET_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.split(os.path.abspath(__file__))[0])),"Presets")
 def saveAsPreset(activeObj,presetName,gameName):
 	folderPath = os.path.join(PRESET_DIR,gameName)
@@ -45,6 +45,9 @@ def saveAsPreset(activeObj,presetName,gameName):
 					"Ver32Unknown1":activeObj.re_mdf_material.flags.ver32Unknown1,
 					"Ver32Unknown2":activeObj.re_mdf_material.flags.ver32Unknown2,
 					"FlagBitFlag":activeObj.re_mdf_material.flags.flagIntValue,
+					"FlagBitFlagB":activeObj.re_mdf_material.flags.flagIntValueB,
+					"ShaderLODNum":activeObj.re_mdf_material.flags.shaderLODNum,
+					"BakeTextureArraySize":activeObj.re_mdf_material.flags.bakeTextureArraySize,
 					}
 				
 				materialJSONDict["Property List"] = []
@@ -150,13 +153,19 @@ def readPresetJSON(filepath):
 		except:
 			pass
 		materialObj.re_mdf_material.flags.flagIntValue = materialJSONDict["Flags"]["FlagBitFlag"]
-		
+		try:
+			materialObj.re_mdf_material.flags.flagIntValueB = materialJSONDict["Flags"]["FlagBitFlagB"]
+			materialObj.re_mdf_material.flags.shaderLODNum = materialJSONDict["Flags"]["ShaderLODNum"]
+			materialObj.re_mdf_material.flags.bakeTextureArraySize = materialJSONDict["Flags"]["BakeTextureArraySize"]
+		except:
+			pass
 		for propEntry in materialJSONDict["Property List"]:
 			prop = materialObj.re_mdf_material.propertyList_items.add()
 			prop.prop_name = propEntry["Property Name"]
 			prop.data_type = propEntry["Data Type"]
 			try:
 				prop.padding = propEntry["Padding"]
+				prop.frontPadding = propEntry["FrontPadding"]
 			except:
 				pass
 			if prop.data_type == "VEC4":

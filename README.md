@@ -1,7 +1,7 @@
 ![REMeshEditorTitle](https://github.com/NSACloud/RE-Mesh-Editor/assets/46909075/156d0b53-ff4f-43db-9a3d-9e0cbd71326e)
 
 
-**V0.59 (11/12/2025) | [Planned Features](https://github.com/NSACloud/RE-Mesh-Editor/milestone/1) | [Change Log](https://github.com/NSACloud/RE-Mesh-Editor?tab=readme-ov-file#change-log)**
+**V0.60 (12/15/2025) | [Planned Features](https://github.com/NSACloud/RE-Mesh-Editor/milestone/1) | [Change Log](https://github.com/NSACloud/RE-Mesh-Editor?tab=readme-ov-file#change-log)**
 
 **BETA RELEASE, THERE MAY BE BUGS**
 
@@ -9,7 +9,7 @@
 This addon allows for importing and exporting of RE Engine mesh and mdf2 (material) files natively in Blender.
 ### [Download RE Mesh Editor](https://github.com/NSACloud/RE-Mesh-Editor/archive/refs/heads/main.zip)
 
-<img width="1950" height="1164" alt="meshEditorPreview" src="https://github.com/user-attachments/assets/104dd8c4-7dfb-41e2-9634-5b9223a71669" />
+<img width="1544" height="920" alt="meshEditorPreview" src="https://github.com/user-attachments/assets/bc0ac317-922e-4ad5-8a96-850faff2eeed" />
 
 ## Features
  - Allows for importing and exporting of RE Engine mesh files.
@@ -50,12 +50,13 @@ This addon allows for importing and exporting of RE Engine mesh and mdf2 (materi
  - **Resident Evil 8**
  - **Resident Evil Re:Verse** 
  - **Monster Hunter Rise**
+ - **Monster Hunter Wilds**
  - **Street Fighter 6**
  - **Dragon's Dogma 2**
  - **Kunitsu-Gami: Path of the Goddess**
  - **Dead Rising Deluxe Remaster**
  - **Onimusha 2: Samurai's Destiny**
- - **Monster Hunter Wilds**
+ - **Pragmata**
  
 Support for more games may be added in the future.
 
@@ -81,13 +82,21 @@ To update this addon, navigate to Preferences > Add-ons > RE Mesh Editor and pre
 
 ## Change Log
 
+### V0.60 - 12/15/2025
+* Added import support for the Pragmata demo. NOTE: Mesh exporting for Pragmata is not working correctly yet.
+* Fixed some issues with MDF material importing on SF6 and newer.
+* Added "Find and Replace" button in the MDF material texture bindings.
+* Added new flags to the MDF material flags, these are only usable for SF6 or newer.
+* Reworked MDF file serialization to produce files that are 100% identical to the original files.
+* Fixed issue that prevented repacking array textures from working correctly.
+
 ### V0.59 - 11/12/2025
 * Added support for Blender 5.0.
 * Removed support for Blender versions older than 3.3. This is due to certain shader nodes not being available on older versions.
 
 ### V0.58 - 10/26/2025
 * Added new "RE Batch Exporter" button under the RE Mesh tab. This allows for batch exporting of all supported file types.
-* Added "Unpack Mod Pak" button in the RE Mesh tab.
+* Added "Unpack Mod Pak" button in the RE Mesh tab. (Requires RE Asset Library)
 * Added "Hide Material In Game" flag in the MDF material flags. Any materials with this option checked will appear invisible in game.
 * Added dialog that allows the amount of weights to be specified when using "Limit Total and Normalize All".
 * Fixed issue where certain MDF parameters in SF6 would be changed upon importing to Blender. They are now corrected upon export.

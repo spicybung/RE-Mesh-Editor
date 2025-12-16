@@ -167,10 +167,14 @@ class OBJECT_PT_MDFFlagsPanel(Panel):
 		col2 = split.column()
 		col2.alignment='RIGHT'
 		col2.prop(flags, "hideMaterialInGame")
-		col2.prop(flags, "ver32Unknown")
-		col2.prop(flags, "ver32Unknown1")
-		col2.prop(flags, "ver32Unknown2")
+		col2.prop(flags, "shaderLODNum")
+		col2.prop(flags, "bakeTextureArraySize")
+		col2.separator()
+		
 		col2.prop(flags,"flagIntValue")
+		col2.prop(flags, "flagIntValueB")
+		col2.separator()
+		col2.separator(type = "LINE")
 		
 		col2.prop(flags,"BaseTwoSideEnable")
 		col2.prop(flags,"BaseAlphaTestEnable")
@@ -182,6 +186,7 @@ class OBJECT_PT_MDFFlagsPanel(Panel):
 		col2.prop(flags,"AlphaMaskUsed")
 		col2.prop(flags,"ForcedTwoSideEnable")
 		col2.prop(flags,"TwoSideEnable")
+		col2.prop(flags,"TransparentZPostPassEnable")
 		col2.prop(flags,"TessFactor")
 		col2.prop(flags,"PhongFactor")
 		col2.prop(flags,"RoughTransparentEnable")
@@ -192,6 +197,20 @@ class OBJECT_PT_MDFFlagsPanel(Panel):
 		col2.prop(flags,"RequireDualQuaternion")
 		col2.prop(flags,"PixelDepthOffsetUsed")
 		col2.prop(flags,"NoRayTracing")
+		
+		col2.separator()
+		col2.separator(type = "LINE")
+		col2.prop(flags,"TransparentDistortionEnable")
+		col2.prop(flags,"AlphaUsed")
+		col2.prop(flags,"BakeTextureUseSecondaryUV")
+		col2.prop(flags,"ForwardPrepassEnabled")
+		col2.prop(flags,"ForcedAlphaTestEnableShadow")
+		col2.prop(flags,"TessellationZPrepassDisable")
+		col2.prop(flags,"DitheredLodTransitionEnable")
+		col2.prop(flags,"reserved0")
+		col2.prop(flags,"TransparentPriorityBias")
+		col2.prop(flags,"reserved1")
+		col2.prop(flags,"reserved2")
 		
 
 class OBJECT_PT_MDFMaterialPropertyListPanel(Panel):
@@ -236,6 +255,7 @@ class OBJECT_PT_MDFMaterialTextureBindingListPanel(Panel):
 		col1 = split.column()
 		col2 = split.column()
 		col2.label(text = f"Texture Binding Count: {str(len(obj.re_mdf_material.textureBindingList_items))}")
+		col2.operator("re_mdf.replace_texture_bindings")
 		col2.template_list(
 			listtype_name = "MESH_UL_MDFTextureBindingList", 
 			list_id = "",

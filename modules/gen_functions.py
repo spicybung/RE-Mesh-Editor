@@ -1,5 +1,5 @@
 #Author: NSA Cloud
-#V5
+#V6
 import os
 import struct
 import glob
@@ -255,3 +255,9 @@ def resolvePath(pathString):
 		if not os.path.isfile(newPath):#Lower case the path in case the pak list is lowercased
 			newPath = newPath.lower()
 			return newPath
+	
+def splitInt64(value):#Takes int64 and converts to 2 int32's
+	return struct.unpack("ii", value.to_bytes(8, "little", signed=False))
+
+def concatInt(a, b):#Combines two int values into a int64
+	return (a << 32) | b

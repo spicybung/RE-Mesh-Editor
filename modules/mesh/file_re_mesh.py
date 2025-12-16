@@ -56,7 +56,13 @@ VERSION_DR = 125#file:240424828,internal:240423829
 VERSION_ONI2 = 127#file:240827123,internal:240827123
 
 VERSION_MHWILDS = 130#file:241111606,internal:240704828
+VERSION_PRAGDEMO = 135#file:250925211,internal:250707828
 
+SIX_WEIGHT_GAMES = frozenset([
+	VERSION_SF6,
+	VERSION_MHWILDS,
+	VERSION_PRAGDEMO,
+	])
 
 meshFileVersionToNewVersionDict = {
 	1808282334:VERSION_DMC5,
@@ -76,6 +82,7 @@ meshFileVersionToNewVersionDict = {
 	240820143:VERSION_MHWILDS,
 	240827123:VERSION_ONI2,
 	241111606:VERSION_MHWILDS,
+	250925211:VERSION_PRAGDEMO,
 	}
 newVersionToMeshFileVersion = {
 	VERSION_DMC5:1808282334,
@@ -93,6 +100,7 @@ newVersionToMeshFileVersion = {
 	VERSION_DR:240424828,
 	VERSION_ONI2:240820143,
 	VERSION_MHWILDS:241111606,
+	VERSION_PRAGDEMO:250925211,
 	}
 meshFileVersionToInternalVersionDict = {
 	1808282334:386270720,#VERSION_DMC5
@@ -110,6 +118,7 @@ meshFileVersionToInternalVersionDict = {
 	240820143:240704828,#VERSION_MHWILDS
 	240827123:240704828,#VERSION_ONI2
 	241111606:240704828,#VERSION_MHWILDS
+	250925211:250707828,#VERSION_PRAGDEMO
 	}
 internalVersionToMeshFileVersionDict = {
 	386270720:1808282334,#VERSION_DMC5
@@ -127,6 +136,7 @@ internalVersionToMeshFileVersionDict = {
 	#240704828:240820143,#VERSION_MHWILDSBETA
 	240704828:240820143,#VERSION_ONI2
 	240704828:241111606,#VERSION_MHWILDS
+	250707828:250925211,#VERSION_PRAGDEMO
 	}
 meshFileVersionToGameNameDict = {
 	1808282334:"DMC5",#VERSION_DMC5
@@ -146,6 +156,7 @@ meshFileVersionToGameNameDict = {
 	240820143:"MHWILDS",#VERSION_MHWILDSBETA
 	240827123:"ONI2",#VERSION_ONI2
 	241111606:"MHWILDS",#VERSION_MHWILDS
+	250925211:"PRAG",#VERSION_PRAGDEMO
 	}
 
 #Used for unmapped mesh versions, potentially allows for importing
@@ -561,6 +572,8 @@ class StreamingBufferHeaderEntry():
 		self.vertexElementCount = 0
 		self.unpaddedBufferSize = 0
 		self.unpaddedBufferSize2 = 0
+		self.prag_unknOffset0 = 0
+		self.prag_unknOffset1 = 0
 		self.unkn7 = 0
 		self.unkn8 = 0
 		self.unkn9 = 0
@@ -574,12 +587,15 @@ class StreamingBufferHeaderEntry():
 		self.faceBuffer = None
 		self.vertexElementList = []
 		
-	def read(self,file):
+	def read(self,file,version):
 		self.unkn0 = read_uint64(file)
 		self.totalBufferSize = read_uint(file)
 		self.vertexBufferLength = read_uint(file)
 		self.mainVertexElementCount = read_ushort(file)
 		self.vertexElementCount = read_ushort(file)
+		if version >= VERSION_PRAGDEMO:
+			self.prag_unknOffset0 = read_uint64(file)
+			self.prag_unknOffset1 = read_uint64(file)
 		self.unpaddedBufferSize = read_uint(file)
 		self.unpaddedBufferSize2 = read_uint(file)
 		self.unkn7 = read_uint(file)
@@ -593,12 +609,15 @@ class StreamingBufferHeaderEntry():
 		self.unkn15 = read_uint(file)
 
 
-	def write(self,file):
+	def write(self,file,version):
 		write_uint64(file, self.unkn0)
 		write_uint(file, self.totalBufferSize)
 		write_uint(file, self.vertexBufferLength)
 		write_ushort(file, self.mainVertexElementCount)
 		write_ushort(file, self.vertexElementCount)
+		if version >= VERSION_PRAGDEMO:
+			write_uint64(file, self.prag_unknOffset0)
+			write_uint64(file, self.prag_unknOffset1)
 		write_uint(file, self.unpaddedBufferSize)
 		write_uint(file, self.unpaddedBufferSize2)
 		write_uint(file, self.unkn7)
@@ -636,6 +655,8 @@ class MeshBufferHeader():
 		self.faceBufferSize = 0
 		self.mainVertexElementCount = 0
 		self.vertexElementCount = 0
+		self.prag_unknOffset0 = 0
+		self.prag_unknOffset1 = 0
 		self.block2FaceBufferOffset = 0
 		self.NULL = 0
 		self.vertexElementSize = 0#TODO this field name is not correct
@@ -675,6 +696,9 @@ class MeshBufferHeader():
 			self.faceBufferOffset = self.vertexBufferOffset + self.vertexBufferSize
 			self.mainVertexElementCount = read_ushort(file)
 			self.vertexElementCount = read_ushort(file)
+			if version >= VERSION_PRAGDEMO:
+				self.prag_unknOffset0 = read_uint64(file)
+				self.prag_unknOffset1 = read_uint64(file)
 			self.block2FaceBufferOffset = read_uint(file)
 			self.faceBufferSize = self.block2FaceBufferOffset - self.vertexBufferSize
 			self.NULL = read_uint(file)
@@ -698,12 +722,15 @@ class MeshBufferHeader():
 			for i in range(0,streamingHeader.entryCount):
 				
 				entry = StreamingBufferHeaderEntry()
-				entry.read(file)
+				entry.read(file,version)
+				#print(entry.__dict__)
 				streamInfo = streamingHeader.streamingInfoEntryList[i]
 				#vertexBytes = streamingBuffer[streamInfo.bufferStart:streamInfo.bufferStart+entry.vertexBufferLength]
 				#faceBytes = streamingBuffer[streamInfo.bufferStart+entry.vertexBufferLength:streamInfo.bufferStart+entry.unpaddedBufferSize]
 				entry.vertexBuffer = streamingBuffer[streamInfo.bufferStart:streamInfo.bufferStart+entry.vertexBufferLength]
 				entry.faceBuffer = streamingBuffer[streamInfo.bufferStart+entry.vertexBufferLength:streamInfo.bufferStart+entry.unpaddedBufferSize]
+				#print(f"stream header {i} vertex buffer size: {len(entry.vertexBuffer)}")
+				#print(f"stream header {i} face buffer size: {len(entry.faceBuffer)}")
 				#entry.faceBuffer = streamingBuffer[streamInfo.bufferStart+entry.vertexBufferLength:entry.nextBufferOffset]
 				
 				
@@ -776,6 +803,9 @@ class MeshBufferHeader():
 			write_uint(file, self.vertexBufferSize)
 			write_ushort(file, self.mainVertexElementCount)
 			write_ushort(file, self.vertexElementCount)
+			if version >= VERSION_PRAGDEMO:
+				write_uint64(file, self.prag_unknOffset0)
+				write_uint64(file, self.prag_unknOffset1)
 			write_uint(file, self.block2FaceBufferOffset)
 			write_uint(file, self.NULL)
 			write_short(file, self.vertexElementSize)
@@ -1521,7 +1551,7 @@ class REMesh():
 			file.seek(self.fileHeader.meshOffset)
 			self.meshBufferHeader = MeshBufferHeader()
 			self.meshBufferHeader.read(file,version,self.streamingInfoHeader,streamingBuffer)
-				
+					
 		if self.fileHeader.floatsOffset:
 			file.seek(self.fileHeader.floatsOffset)
 			self.floatsHeader = FloatData()
@@ -1828,11 +1858,16 @@ class sizeData:
 			self.VERTEX_ELEMENT_OFFSET = 80
 		
 		
+		
 		if version >= VERSION_DD2NEW:
 			self.MATERIAL_SUBDIVISION_SIZE = 28
 			
 		if version >= VERSION_DR:
 			self.MATERIAL_SUBDIVISION_SIZE = 32
+			
+		if version >= VERSION_PRAGDEMO:
+			self.VERTEX_ELEMENT_OFFSET = 96
+			
 		self.VERTEX_ELEMENT_SIZE = 8
 
 def ParsedREMeshToREMesh(parsedMesh,meshVersion):
@@ -1880,6 +1915,8 @@ def ParsedREMeshToREMesh(parsedMesh,meshVersion):
 			reMesh.lodHeader.skinWeightCount = 9
 		elif version == VERSION_MHWILDS:
 			reMesh.lodHeader.skinWeightCount = 25#Not sure why but this fixes monsters causing crashes and dead hitbox issues
+		elif version == VERSION_PRAGDEMO:
+			reMesh.lodHeader.skinWeightCount = 27#
 		if parsedMesh.bufferHasUV2:#This is wrong, uv count is determined by something else. However uv count is unused by the game so it doesn't really matter
 			reMesh.lodHeader.uvCount = 2
 		else:
@@ -1892,7 +1929,7 @@ def ParsedREMeshToREMesh(parsedMesh,meshVersion):
 		currentOffset = reMesh.lodHeader.offsetOffset + 8*reMesh.lodHeader.lodGroupCount + getPaddingAmount(reMesh.lodHeader.offsetOffset+(8*reMesh.lodHeader.lodGroupCount),16)
 		
 		#SF6 uses six weights with higher possible bone index values
-		isSixWeight = version == VERSION_SF6 or version == VERSION_MHWILDS
+		isSixWeight = version in SIX_WEIGHT_GAMES
 		
 		#Main Meshes
 		#TODO Move lod parsing into a function and call it for both main and shadow mesh

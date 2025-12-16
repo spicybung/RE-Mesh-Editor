@@ -124,6 +124,7 @@ class WM_OT_OpenPresetFolder(Operator):
 		os.startfile(PRESET_DIR)
 		return {'FINISHED'}
 
+
 class WM_OT_SavePreset(Operator):
 	bl_label = "Save Selected As Preset"
 	bl_idname = "re_mdf.save_selected_as_preset"
@@ -143,6 +144,49 @@ class WM_OT_SavePreset(Operator):
 			return {'FINISHED'}
 		else:
 			return {'CANCELLED'}
+	def invoke(self,context,event):
+		return context.window_manager.invoke_props_dialog(self)
+
+		return {'FINISHED'}	
+	
+def update_findValueCount(self, context):
+	if context.active_object.get("~TYPE") == "RE_MDF_MATERIAL":
+		material = context.active_object.re_mdf_material
+		replaceCount = 0
+		for entry in material.textureBindingList_items:
+			replaceCount += entry.path.count(self.findValue)
+		self.instanceCount = replaceCount
+class WM_OT_FindReplaceTextureBindings(Operator):
+	bl_label = "Find and Replace"
+	bl_idname = "re_mdf.replace_texture_bindings"
+	bl_context = "objectmode"
+	bl_description = "Find and replace specified strings inside texture paths"
+	findValue : bpy.props.StringProperty(name = "Find",default = "ch02_001_0002",options = {"TEXTEDIT_UPDATE"},update = update_findValueCount)
+	replaceValue : bpy.props.StringProperty(name = "Replace With",default = "")
+	instanceCount : bpy.props.IntProperty(name = "Count",default = 0)
+	@classmethod
+	def poll(self,context):
+		return context.active_object is not None
+	
+	def execute(self, context):
+		replaceCount = 0
+		if context.active_object.get("~TYPE") == "RE_MDF_MATERIAL":
+			material = context.active_object.re_mdf_material
+			for entry in material.textureBindingList_items:
+				replaceCount += entry.path.count(self.findValue)
+				entry.path = entry.path.replace(self.findValue,self.replaceValue)
+				
+			self.report({"INFO"},f"Replaced {replaceCount} instances of \"{self.findValue}\"")
+			return {'FINISHED'}
+		else:
+			return {'CANCELLED'}
+	
+	def draw(self,context):
+		layout = self.layout
+		layout.prop(self,"findValue")
+		layout.label(text=f"{self.instanceCount} instances found.")
+		layout.prop(self,"replaceValue")
+	
 	def invoke(self,context,event):
 		return context.window_manager.invoke_props_dialog(self)
 

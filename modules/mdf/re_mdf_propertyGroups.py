@@ -1,7 +1,7 @@
 #Author: NSA Cloud
 import bpy
 import os
-from .file_re_mdf import MDFFlags
+from .file_re_mdf import MDFFlags,MDFFlagsB
 from bpy.props import (StringProperty,
 					   BoolProperty,
 					   IntProperty,
@@ -50,7 +50,7 @@ def filterMeshCollection(self, collection):
 
 
 flags = MDFFlags()#Bitflag struct
-
+flagsB = MDFFlagsB()#Bitflag struct
 def linkBlenderMaterial(materialObj,materialName):
 	
 	#Check if material name is used more than once, link it if it's only used once
@@ -167,10 +167,14 @@ def update_FlagsFromInt(self, context):
 	if not self.internal_changingFlagValues: 
 		try:
 			flags.asInt32 = self.flagIntValue
+			flagsB.asInt32 = self.flagIntValueB
 			self.internal_changingFlagValues = True
 			for field_name, field_type, _ in flags.flagValues._fields_:
 				#print(f"setting {field_name} to {abs(getattr(flags.flagValues, field_name))}")
 				setattr(self,field_name,abs(getattr(flags.flagValues, field_name)))
+			for field_name, field_type, _ in flagsB.flagValues._fields_:
+				#print(f"setting {field_name} to {abs(getattr(flagsB.flagValues, field_name))}")
+				setattr(self,field_name,abs(getattr(flagsB.flagValues, field_name)))
 			self.internal_changingFlagValues = False
 		except:
 			self.internal_changingFlagValues = False
@@ -178,14 +182,21 @@ def update_IntFromFlags(self, context):
 	if not self.internal_changingFlagValues:
 		try:
 			flags.asInt32 = 0
+			flagsB.asInt32 = 0
 			for field in flags.flagValues._fields_:
 				fieldName = field[0]
 				if fieldName in self:
 					#print(f"setting {fieldName} to {getattr(self,fieldName)}")
 					setattr(flags.flagValues,fieldName,getattr(self,fieldName))
-					
+			for field in flagsB.flagValues._fields_:
+				fieldName = field[0]
+				if fieldName in self:
+					#print(f"setting {fieldName} to {getattr(self,fieldName)}")
+					setattr(flagsB.flagValues,fieldName,getattr(self,fieldName))
+						
 			self.internal_changingFlagValues = True
-			self.flagIntValue = flags.asInt32 
+			self.flagIntValue = flags.asInt32
+			self.flagIntValueB = flagsB.asInt32 
 			self.internal_changingFlagValues = False
 		except:
 			self.internal_changingFlagValues = False
@@ -220,6 +231,7 @@ class MDFToolPanelPropertyGroup(bpy.types.PropertyGroup):
 				("DR", "Dead Rising", ""),
 				("ONI2", "Onimusha 2", ""),
 				("MHWILDS", "Monster Hunter Wilds", ""),
+				("PRAG", "Pragmata", ""),
 			  ]
 		)
 	materialPresets: EnumProperty(
@@ -280,22 +292,40 @@ class MDFFlagsPropertyGroup(bpy.types.PropertyGroup):
 		description="If checked, any meshes using this material will appear invisible in game.\nThis works by making the game unable to find the material hash.\nUsing this option is not recommended. Deleting the materials from the MDF and the objects using them in the mesh files is the correct way to do this.\nOnly use this if there's some reason you can't alter the mesh file.",
 		default = False
 	)
-	ver32Unknown: IntProperty(
+	ver32Unknown: IntProperty(#Unused, kept for backwards compatibility with saved blend files
 		name = "Version 31 Unknown",
 		description="Unknown value for version 31 and above, likely flags",#TODO Add description
+		default = -1
 		)
-	ver32Unknown1: IntProperty(
+	ver32Unknown1: IntProperty(#Unused, kept for backwards compatibility with saved blend files
 		name = "Version 31 Unknown 2",
 		description="Unknown value for version 31 and above, likely flags",#TODO Add description
+		default = -1
 		)
-	ver32Unknown2: IntProperty(
+	ver32Unknown2: IntProperty(#Unused, kept for backwards compatibility with saved blend files
 		name = "Version 31 Unknown 3",
 		description="Unknown value for version 31 and above, likely flags",#TODO Add description
+		default = -1
 		)
 	flagIntValue: IntProperty(
-		name = "Bit Flag",
+		name = "Bit Flag A",
 		description="Integer representation of all flag values.\nChanging this will change all of the flag values",
 		update = update_FlagsFromInt
+		)
+	flagIntValueB: IntProperty(
+		name = "Bit Flag B",
+		description="Extended bit flag for SF6 (version 31) and newer.\nChanging this will change all of the extended flag values",
+		update = update_FlagsFromInt
+		)
+	shaderLODNum: IntProperty(#SF6 or newer
+		name = "Shader LOD Num",
+		description="Do not change this unless you know what you're doing. Controls MMTRS LODs.",
+		default = 0
+		)
+	bakeTextureArraySize: IntProperty(#SF6 or newer
+		name = "Bake Texture Array Size",
+		description="Do not change this unless you know what you're doing.",
+		default = 0
 		)
 	internal_changingFlagValues: BoolProperty(
 		name = "Change Flag Values",
@@ -352,11 +382,16 @@ class MDFFlagsPropertyGroup(bpy.types.PropertyGroup):
 		description="",
 		update = update_IntFromFlags
 		)
+	TransparentZPostPassEnable: BoolProperty(
+		name = "TransparentZPostPassEnable*",
+		description="*SF6 (version 31) or newer only, this bit is a part of TessFactor on earlier versions",
+		update = update_IntFromFlags
+		)
 	TessFactor: IntProperty(
 		name = "TessFactor",
 		description="",
 		min = 0,
-		max = 63,
+		max = 31,#5 bits
 		update = update_IntFromFlags
 		)
 	PhongFactor: IntProperty(
@@ -407,6 +442,69 @@ class MDFFlagsPropertyGroup(bpy.types.PropertyGroup):
 		update = update_IntFromFlags
 		)
 	
+	#Extended Flags
+	TransparentDistortionEnable: BoolProperty(
+		name = "TransparentDistortionEnable",
+		description="*SF6 (version 31) or newer only",
+		update = update_IntFromFlags
+		)
+	AlphaUsed: BoolProperty(
+		name = "AlphaUsed",
+		description="*SF6 (version 31) or newer only",
+		update = update_IntFromFlags
+		)
+	BakeTextureUseSecondaryUV: BoolProperty(
+		name = "BakeTextureUseSecondaryUV",
+		description="*SF6 (version 31) or newer only",
+		update = update_IntFromFlags
+		)
+	ForwardPrepassEnabled: BoolProperty(
+		name = "ForwardPrepassEnabled",
+		description="*SF6 (version 31) or newer only",
+		update = update_IntFromFlags
+		)
+	ForcedAlphaTestEnableShadow: BoolProperty(
+		name = "ForcedAlphaTestEnableShadow",
+		description="*SF6 (version 31) or newer only",
+		update = update_IntFromFlags
+		)
+	TessellationZPrepassDisable: BoolProperty(
+		name = "TessellationZPrepassDisable",
+		description="*SF6 (version 31) or newer only",
+		update = update_IntFromFlags
+		)
+	DitheredLodTransitionEnable: BoolProperty(
+		name = "DitheredLodTransitionEnable",
+		description="*SF6 (version 31) or newer only",
+		update = update_IntFromFlags
+		)
+	reserved0: BoolProperty(
+		name = "reserved0",
+		description="*SF6 (version 31) or newer only",
+		update = update_IntFromFlags
+		)
+	TransparentPriorityBias: IntProperty(
+		name = "TransparentPriorityBias",
+		description="",
+		min = 0,
+		max = 255,
+		update = update_IntFromFlags
+		)
+	reserved1: IntProperty(
+		name = "reserved1",
+		description="",
+		min = 0,
+		max = 255,
+		update = update_IntFromFlags
+		)
+	reserved2: IntProperty(
+		name = "reserved2",
+		description="",
+		min = 0,
+		max = 255,
+		update = update_IntFromFlags
+		)
+	
 class MDFPropPropertyGroup(bpy.types.PropertyGroup):
     prop_name: bpy.props.StringProperty(
         name="",
@@ -446,7 +544,10 @@ class MDFPropPropertyGroup(bpy.types.PropertyGroup):
         name="",
         default=0
     )
-
+    frontPadding: bpy.props.IntProperty(#Not exposed in editor, used for SF6's weird mmtrs padding
+        name="",
+        default=0
+    )
 class MDFTextureBindingPropertyGroup(bpy.types.PropertyGroup):
     textureType: StringProperty(
         name="",
@@ -597,71 +698,51 @@ class MDFMaterialPropertyGroup(bpy.types.PropertyGroup):
 		)
 	shaderType: EnumProperty(
 		name="Material Shader Type",
-		description="Set shader type",
-		items=[ ("0", "Standard", ""),
-				("1", "Decal", ""),
-				("2", "DecalWithMetallic", ""),
-				("3", "DecalNRMR", ""),
-				("4", "Transparent", ""),
-				("5", "Distortion", ""),
-				("6", "PrimitiveMesh", ""),
-				("7", "PrimitiveSolidMesh", ""),
-				("8", "Water", ""),
-				("9", "SpeedTree", ""),
-				("10", "GUI", ""),
-				("11", "GUIMesh", ""),
-				("12", "GUIMeshTransparent", ""),
-				("13", "ExpensiveTransparent", ""),
-				("14", "Forward", ""),
-				("15", "RenderTarget", ""),
-				("16", "PostProcess", ""),
-				("17", "PrimitiveMaterial", ""),
-				("18", "PrimitiveSolidMaterial", ""),
-				("19", "SpineMaterial", ""),
-				("20", "Max", ""),
+		description="Set shader type. Note that these values are from MH Wilds and may display incorrectly on different games",
+		items=[ ("0", "Standard (0)", ""),
+				("1", "Decal (1)", ""),
+				("2", "DecalStencil (2)", ""),
+				("3", "SeparateAlphaDecal (3)", ""),
+				("4", "DecalWithMetallic (4)", ""),
+				("5", "DecalNRMR (5)", ""),
+				("6", "Transparent (6)", ""),
+				("7", "TransparentStencil (7)", ""),
+				("8", "Distortion (8)", ""),
+				("9", "PrimitiveMesh (9)", ""),
+				("10", "PrimitiveSolidMesh (10)", ""),
+				("11", "Water (11)", ""),
+				("12", "SpeedTree (12)", ""),
+				("13", "GUI (13)", ""),
+				("14", "GUIMesh (14)", ""),
+				("15", "GUIMeshTransparent (15)", ""),
+				("16", "ExpensiveTransparent (16)", ""),
+				("17", "Forward (17)", ""),
+				("18", "RenderTarget (18)", ""),
+				("19", "PostProcess (19)", ""),
+				("20", "PrimitiveMaterial (20)", ""),
+				("21", "PrimitiveSolidMaterial (21)", ""),
+				("22", "PrimitiveSolidMaterialExpensive (22)", ""),
+				("23", "SpineMaterial (23)", ""),
+				("24", "VolumetricFog (24)", ""),
+				("25", "ShellFurMaterial (25)", ""),
+				("26", "VolumeDecal (26)", ""),
+				("27", "AlembicMesh (27)", ""),
+				("28", "AlembicMeshForward (28)", ""),
+				("29", "AlembicMeshTransparent (29)", ""),
+				("30", "MarchingCubes (30)", ""),
+				("31", "MarchingCubesForward (31)", ""),
+				("32", "MarchingCubesTransparent (32)", ""),
+				("33", "Strands (33)", ""),
+				("34", "Eyeball (34)", ""),
+				("35", "EyeballPostProcess (35)", ""),
+				("36", "NFXTransparent (36)", ""),
+				("37", "Cloudscape2 (37)", ""),
+				("38", "CloudscapeReserved (38)", ""),
+				("39", "VolumeSolidMaterial (39)", ""),
+				("40", "VolumeDecalMetallic (40)", ""),
 				
 			   ]
 		)
-	#TODO determine if updating shader type enum is going to break existing blend files
-	"""
-			("0", "Standard", ""),
-			("1", "Decal", ""),
-			("2", "SeparateAlphaDecal", ""),
-			("3", "DecalWithMetallic", ""),
-			("4", "DecalNRMR", ""),
-			("5", "Transparent", ""),
-			("6", "Distortion", ""),
-			("7", "PrimitiveMesh", ""),
-			("8", "PrimitiveSolidMesh", ""),
-			("9", "Water", ""),
-			("10", "SpeedTree", ""),
-			("11", "GUI", ""),
-			("12", "GUIMesh", ""),
-			("13", "GUIMeshTransparent", ""),
-			("14", "ExpensiveTransparent", ""),
-			("15", "Forward", ""),
-			("16", "RenderTarget", ""),
-			("17", "PostProcess", ""),
-			("18", "PrimitiveMaterial", ""),
-			("19", "PrimitiveSolidMaterial", ""),
-			("20", "PrimitiveSolidMaterialExpensive", ""),
-			("21", "SpineMaterial", ""),
-			("22", "VolumetricFog", ""),
-			("23", "ShellFurMaterial", ""),
-			("24", "VolumeDecal", ""),
-			("25", "AlembicMesh", ""),
-			("26", "AlembicMeshForward", ""),
-			("27", "AlembicMeshTransparent", ""),
-			("28", "MarchingCubes", ""),
-			("29", "MarchingCubesForward", ""),
-			("30", "MarchingCubesTransparent", ""),
-			("31", "Strands", ""),
-			("32", "NFXTransparent", ""),
-			("33", "Cloudscape2", ""),
-			("34", "CloudscapeReserved", ""),
-			("35", "VolumeSolidMaterial", ""),		
-			("36", "Max", ""),
-		"""
 	linkedMaterial: bpy.props.PointerProperty(
         name="Linked Material",
 		description="The Blender material that corresponds to this MDF material. Any changes made to supported MDF properties will reflect on the Blender material.\nIf a linked material is not set, it will be set automatically once an MDF property is changed",

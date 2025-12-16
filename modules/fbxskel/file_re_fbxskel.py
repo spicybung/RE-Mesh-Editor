@@ -2,7 +2,7 @@
 import os
 
 from ..gen_functions import textColors,raiseWarning,raiseError,getPaddingAmount,read_uint,read_int,read_uint64,read_float,read_short,read_ushort,read_ubyte,read_unicode_string,read_byte,write_uint,write_int,write_uint64,write_float,write_short,write_ushort,write_ubyte,write_unicode_string,write_byte
-from ..hashing.pymmh3 import hash_wide
+from ..hashing.mmh3.pymmh3 import hashUTF16
 
 DEBUG_MODE = False
 class SIZEDATA():
@@ -169,7 +169,7 @@ class FBXSkelFile():
 		
 		stringTableOffset = self.header.hashOffset + (self.header.boneCount * self.sizeData.HASH_ENTRY_SIZE)
 		for bone in self.boneEntryList:
-			bone.boneMMH3Hash = hash_wide(bone.boneName)
+			bone.boneMMH3Hash = hashUTF16(bone.boneName)
 			bone.boneNameOffset = stringOffsetDict[bone.boneName] + stringTableOffset
 		self.boneHashList = []
 		for index,boneEntry in enumerate(self.boneEntryList):

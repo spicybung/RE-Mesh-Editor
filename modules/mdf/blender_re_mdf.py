@@ -2,8 +2,8 @@ import os
 import bpy
 
 from ..blender_utils import showMessageBox,showErrorMessageBox
-from ..gen_functions import textColors,raiseWarning,splitNativesPath,getAdjacentFileVersion
-from .file_re_mdf import readMDF,writeMDF,MDFFile,Material,TextureBinding,Property,gameNameMDFVersionDict,getMDFVersionToGameName,MMTRSData,GPBFEntry
+from ..gen_functions import textColors,raiseWarning,splitNativesPath,getAdjacentFileVersion,splitInt64,concatInt
+from .file_re_mdf import readMDF,writeMDF,MDFFile,Material,TextureBinding,Property,gameNameMDFVersionDict,getMDFVersionToGameName,MMTRSData,GPBFEntry,MDFFlags,MDFFlagsB
 from .ui_re_mdf_panels import tag_redraw
 
 MDFGameNameConflictDict = set(["RE2","RE2RT","DD2"])
@@ -180,6 +180,7 @@ def addPropsToPropList(obj,matPropertyList):
 		newListItem = obj.re_mdf_material.propertyList_items.add()
 		newListItem.prop_name = prop.propName
 		newListItem.padding = prop.padding
+		newListItem.frontPadding = prop.frontPadding
 		lowerPropName = prop.propName.lower()
 		if prop.propName in colorPropertySet or (prop.paramCount == 4 and ("color" in lowerPropName or "_col_" in lowerPropName) and "rate" not in lowerPropName):
 			newListItem.data_type = "COLOR"
@@ -225,8 +226,9 @@ def addGPBFDataToList(obj,bufferNameList,bufferPathList):
 		newListItem = obj.re_mdf_material.gpbfData_items.add()
 		newListItem.gpbfDataString = f"{bufferNameList[i].name},{bufferPathList[i].name},{str(bufferPathList[i].nameUTF16Hash)},{str(bufferPathList[i].nameUTF8Hash)}"
 
-def getMDFFlags(obj,flags):
+def getMDFFlags(obj,flags,flagsB):
 	obj.re_mdf_material.flags.flagIntValue = flags.asInt32
+	obj.re_mdf_material.flags.flagIntValueB = flagsB.asInt32
 	
 #MDF IMPORT
 
@@ -273,7 +275,10 @@ def importMDFFile(filePath,parentCollection = None):
 		materialObj.re_mdf_material.flags.ver32Unknown1 = material.ver32Unkn1
 		materialObj.re_mdf_material.flags.ver32Unknown2 = material.ver32Unkn2
 		
-		getMDFFlags(materialObj,material.flags)
+		materialObj.re_mdf_material.flags.shaderLODNum = material.shaderLODNum 
+		materialObj.re_mdf_material.flags.bakeTextureArraySize = material.bakeTextureArraySize
+		
+		getMDFFlags(materialObj,material.flags,material.flagsB)
 		if gameName == "SF6":
 			for prop in material.propertyList:
 				if "CustomizeRoughness" in prop.propName or "CustomizeMetal" in prop.propName:#Fix for imported SF6 materials, this shouldn't matter in game since it gets overriden by the cmd files
@@ -425,18 +430,39 @@ def buildMDF(mdfCollectionName,mdfVersion = None):
 		newMDFFile = MDFFile()
 		newMDFFile.fileVersion = mdfVersion
 		newMDFFile.Header.version = 1
+		if mdfVersion == 45:#MHWILDS
+			newMDFFile.Header.materialFlags = 1
+			
 		for materialObj in materialObjList:
 			materialEntry = Material()
+			
+			#Reassign previously unknown values from older mdf imports
+			if mdfVersion >= 31 and materialObj.re_mdf_material.flags.ver32Unknown != -1:
+				materialObj.re_mdf_material.bakeTextureArraySize = int(materialObj.re_mdf_material.shaderType)
+				materialObj.re_mdf_material.shaderType = str(materialObj.re_mdf_material.flags.ver32Unknown)
+				materialObj.re_mdf_material.flags.ver32Unknown = -1
+				
+				materialObj.re_mdf_material.flags.flagIntValueB =  materialObj.re_mdf_material.flags.ver32Unknown1
+				materialObj.re_mdf_material.flags.ver32Unknown1 = -1
+				
+				materialObj.re_mdf_material.flags.shaderLODNum =  materialObj.re_mdf_material.flags.ver32Unknown2
+				materialObj.re_mdf_material.flags.ver32Unknown2 = -1
+				print(f"Corrected old MDF material import: {materialObj.re_mdf_material.materialName}")
 			materialEntry.shaderType = int(materialObj.re_mdf_material.shaderType)
 			materialEntry.materialName = materialObj.re_mdf_material.materialName
 			materialEntry.mmtrPath = materialObj.re_mdf_material.mmtrPath
-			materialEntry.ver32Unkn0 = materialObj.re_mdf_material.flags.ver32Unknown
-			materialEntry.ver32Unkn1 = materialObj.re_mdf_material.flags.ver32Unknown1
-			materialEntry.ver32Unkn2 = materialObj.re_mdf_material.flags.ver32Unknown2
+			#materialEntry.ver32Unkn0 = materialObj.re_mdf_material.flags.ver32Unknown
+			#materialEntry.ver32Unkn1 = materialObj.re_mdf_material.flags.ver32Unknown1
+			#materialEntry.ver32Unkn2 = materialObj.re_mdf_material.flags.ver32Unknown2
+			
+			materialEntry.shaderLODNum = materialObj.re_mdf_material.flags.shaderLODNum
+			materialEntry.bakeTextureArraySize = materialObj.re_mdf_material.flags.bakeTextureArraySize
 			
 			materialEntry.hideInGame = materialObj.re_mdf_material.flags.hideMaterialInGame
 			
 			materialEntry.flags.asInt32 = materialObj.re_mdf_material.flags.flagIntValue
+			materialEntry.flagsB.asInt32 = materialObj.re_mdf_material.flags.flagIntValueB
+			
 			for textureBinding in materialObj.re_mdf_material.textureBindingList_items:
 				textureEntry = TextureBinding()
 				textureEntry.textureType = textureBinding.textureType
@@ -448,6 +474,7 @@ def buildMDF(mdfCollectionName,mdfVersion = None):
 				propertyEntry.propName = prop.prop_name
 				propertyEntry.propValue = getPropValue(prop)
 				propertyEntry.padding = prop.padding
+				propertyEntry.frontPadding = prop.frontPadding
 				propertyEntry.paramCount = len(propertyEntry.propValue)
 				materialEntry.propertyList.append(propertyEntry)
 				

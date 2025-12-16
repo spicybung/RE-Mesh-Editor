@@ -716,11 +716,13 @@ missingTexTypeDict = {
 	"NRRA":(.502,.502,1.0,.502),
 	"NRRC":(.502,.502,1.0,.502),
 	"NRRO":(.502,.502,1.0,.502),
+	"NRRH":(.502,.502,1.0,.502),
 	"ATOS":(1.0,0.0,1.0,1.0),
 	"NULLATOS":(1.0,0.0,1.0,1.0),
 	"NULLWHITE":(1.0,1.0,1.0,1.0),
 	"NULLBLACK":(0.0,0.0,0.0,1.0),
 	"ATOC":(1.0,0.0,1.0,1.0),
+	"OCMA":(1.0,1.0,1.0,1.0),
 	}
 MAX_ARRAY_IMPORT_SIZE = 16#Blender can't handle much more than 16 mix nodes into a color node, so it gets treated as a single image node if it exceeds 16
 def addImageNode(nodeTree,textureType,imageList,texturePath,currentPos):
@@ -1010,6 +1012,9 @@ def newEMINode (nodeTree,textureType,matInfo):
 	elif "EmissiveColor" in matInfo["mPropDict"]:
 		emiColorNode = addPropertyNode(matInfo["mPropDict"]["EmissiveColor"], matInfo["currentPropPos"], nodeTree)
 		matInfo["emissionColorNodeLayerGroup"].addMixLayer(emiColorNode.outputs["Color"],mixType = "MULTIPLY",mixFactor = 1.0)
+	elif "Emissive_Color1" in matInfo["mPropDict"]:
+		emiColorNode = addPropertyNode(matInfo["mPropDict"]["Emissive_Color1"], matInfo["currentPropPos"], nodeTree)
+		matInfo["emissionColorNodeLayerGroup"].addMixLayer(emiColorNode.outputs["Color"],mixType = "MULTIPLY",mixFactor = 1.0)
 	emiIntensityNode = None
 	if "Emissive_intensity" in matInfo["mPropDict"]:
 		emiIntensityNode = addPropertyNode(matInfo["mPropDict"]["Emissive_intensity"], matInfo["currentPropPos"], nodeTree)
@@ -1283,7 +1288,7 @@ def newATOSNode (nodeTree,textureType,matInfo):
 	isMaskAlpha = matInfo["isMaskAlphaMMTR"]
 	
 	#Have to do this hack since there's no good way of telling whether the alpha channel is actually alpha with this game
-	if matInfo["gameName"] == "DMC5" and (("Emissive_Intensity" in matInfo["mPropDict"] and matInfo["mPropDict"]["Emissive_Intensity"].propValue[0] != 0.0) or ("EmissiveIntensity" in matInfo["mPropDict"] and matInfo["mPropDict"]["EmissiveIntensity"].propValue[0] != 0.0) or ("Use_Emissive" in matInfo["mPropDict"] and matInfo["mPropDict"]["Use_Emissive"].propValue[0] == 1.0)):
+	if (matInfo["gameName"] == "PRAG" and ("Use_STOC" in matInfo["mPropDict"] and matInfo["mPropDict"]["Use_STOC"].propValue[0] == 1.0)) or (matInfo["gameName"] == "DMC5" and (("Emissive_Intensity" in matInfo["mPropDict"] and matInfo["mPropDict"]["Emissive_Intensity"].propValue[0] != 0.0) or ("EmissiveIntensity" in matInfo["mPropDict"] and matInfo["mPropDict"]["EmissiveIntensity"].propValue[0] != 0.0) or ("Use_Emissive" in matInfo["mPropDict"] and matInfo["mPropDict"]["Use_Emissive"].propValue[0] == 1.0))):
 		#TODO Set up DMC5 emission
 		isMaskAlpha = True
 	
@@ -1400,7 +1405,11 @@ def newOCTDNode (nodeTree,textureType,matInfo):
 	
 	elif textureType == "OcclusionCavitySSSDetailMap":
 		matInfo["subsurfaceSocket"] = separateNode.outputs["Blue"]
-		
+	elif textureType == "OcclusionCavityMaskAnisoMap":
+		matInfo["anisoSocket"] = imageNode.outputs["Alpha"]
+		if "Emissive_MaskStrength" in matInfo["mPropDict"]:
+			maskStrengthNode = addPropertyNode(matInfo["mPropDict"]["Emissive_MaskStrength"], matInfo["currentPropPos"], nodeTree)
+			matInfo["emissionStrengthNodeLayerGroup"].addMixLayer(separateNode.outputs["Blue"],mixType = "MULTIPLY",mixFactor = 1.0,factorOutSocket = maskStrengthNode.outputs["Value"])
 	matInfo["aoNodeLayerGroup"].addMixLayer(separateNode.outputs["Red"])
 	matInfo["cavityNodeLayerGroup"].addMixLayer(separateNode.outputs["Green"])
 	

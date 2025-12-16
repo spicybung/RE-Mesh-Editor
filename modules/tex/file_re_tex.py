@@ -14,6 +14,12 @@ from .format_ops import packetSizeData
 from .enums.tex_format_enum import texFormatToDXGIStringDict
 from . import tex_math as tmath
 
+GDEFLATE_VERSIONS = set([
+	240701001,#VERSION_MHWILDS_BETA
+	241106027,#VERSION_MHWILDS
+	250813143,#VERSION_PRAGDEMO
+	])
+
 VERSION_MHWILDS_BETA = 240701001
 VERSION_MHWILDS = 241106027
 
@@ -261,7 +267,7 @@ class MipData():
         # print(f"{file.tell()}")
         mipData = None  # BytesIO for uncompressed texture data
 
-        if texVersion == VERSION_MHWILDS:# or texVersion == VERSION_MHWILDS_BETA:
+        if texVersion in GDEFLATE_VERSIONS:# or texVersion == VERSION_MHWILDS_BETA:
             mipData = self.uncompressGdeflate(file,
                 currentImageDataHeaderOffset, imageDataOffset)
             endSize = mipData.getbuffer().nbytes
